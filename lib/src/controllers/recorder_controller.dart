@@ -414,6 +414,11 @@ class RecorderController extends ChangeNotifier {
     _recorderState = state;
   }
 
+  void startAgain(){
+    _startTimer();
+    _setRecorderState(RecorderState.recording);
+  }
+
   @override
   void notifyListeners() {
     if (_isDisposed) return;
