@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'dart:math' show max;
+import 'dart:math' show Random, max;
 
 import 'package:flutter/material.dart';
 
@@ -88,8 +88,7 @@ class RecorderController extends ChangeNotifier {
 
   final ValueNotifier<int> _currentScrolledDuration = ValueNotifier(0);
 
-  final StreamController<Duration> _currentDurationController =
-      StreamController.broadcast();
+  final StreamController<Duration> _currentDurationController = StreamController.broadcast();
 
   /// A stream to get current duration of currently recording audio file.
   /// Events are emitted every 50 milliseconds which means current duration is
@@ -97,22 +96,18 @@ class RecorderController extends ChangeNotifier {
   /// [recordedDuration] after stopping the recording.
   Stream<Duration> get onCurrentDuration => _currentDurationController.stream;
 
-  final StreamController<RecorderState> _recorderStateController =
-      StreamController.broadcast();
+  final StreamController<RecorderState> _recorderStateController = StreamController.broadcast();
 
-  final StreamController<Duration> _recordedFileDurationController =
-      StreamController.broadcast();
+  final StreamController<Duration> _recordedFileDurationController = StreamController.broadcast();
 
   /// A Stream to monitor change in RecorderState. Events are emitted whenever
   /// there is change in the RecorderState.
-  Stream<RecorderState> get onRecorderStateChanged =>
-      _recorderStateController.stream;
+  Stream<RecorderState> get onRecorderStateChanged => _recorderStateController.stream;
 
   /// A stream to get duration of recording when audio recorder has
   /// been stopped. Events are only emitted if platform could extract the
   /// duration of audio file when recording is ended.
-  Stream<Duration> get onRecordingEnded =>
-      _recordedFileDurationController.stream;
+  Stream<Duration> get onRecordingEnded => _recordedFileDurationController.stream;
 
   /// A class having controls for recording audio and other useful handlers.
   ///
@@ -228,8 +223,7 @@ class RecorderController extends ChangeNotifier {
     final initialized = await AudioWaveformsInterface.instance.initRecorder(
       path: path,
       encoder: androidEncoder?.index ?? this.androidEncoder.index,
-      outputFormat:
-          androidOutputFormat?.index ?? this.androidOutputFormat.index,
+      outputFormat: androidOutputFormat?.index ?? this.androidOutputFormat.index,
       sampleRate: sampleRate ?? this.sampleRate,
       bitRate: bitRate ?? this.bitRate,
     );
@@ -328,8 +322,7 @@ class RecorderController extends ChangeNotifier {
   }
 
   /// Gets decibels from native
-  Future<double?> _getDecibel() async =>
-      await AudioWaveformsInterface.instance.getDecibel();
+  Future<double?> _getDecibel() async => await AudioWaveformsInterface.instance.getDecibel();
 
   /// Gets decibel by every defined frequency
   void _startTimer() {
@@ -383,8 +376,7 @@ class RecorderController extends ChangeNotifier {
     // calculates min value
     _currentMin = _waveData.fold(
       0,
-      (previousValue, element) =>
-          element < previousValue ? element : previousValue,
+      (previousValue, element) => element < previousValue ? element : previousValue,
     );
 
     final scaledWave = (absDb - _currentMin) / (_maxPeak - _currentMin);
@@ -414,9 +406,26 @@ class RecorderController extends ChangeNotifier {
     _recorderState = state;
   }
 
-  void startAgain(){
-    _startTimer();
-    _setRecorderState(RecorderState.recording);
+  void startAgain() {
+    recordedDuration = Duration.zero;
+    const duration = Duration(milliseconds: 50);
+    _recorderTimer = Timer.periodic(duration, (_) {
+      elapsedDuration += duration;
+      _currentDurationController.add(elapsedDuration);
+    });
+
+    _timer = Timer.periodic(
+      updateFrequency,
+      (timer) async {
+        var db = Random().nextInt(190).toDouble();
+        if (_useLegacyNormalization) {
+          _normaliseLegacy(db);
+        } else {
+          _normalise(db);
+        }
+        notifyListeners();
+      },
+    );
   }
 
   @override
